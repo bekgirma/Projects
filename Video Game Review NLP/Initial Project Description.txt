@@ -1,0 +1,2 @@
+MetaCritic_Scraping.ipynb will ask for video game names and scrapes the web pages in MetaCritic website to collect video game reviews. 
+NLP_RF_Model.ipynb uses the dataset collected from the web scraping and fits a Random Forest model to do sentiment analysis and classify reviews as 'Positive','Average', or 'Negative'.

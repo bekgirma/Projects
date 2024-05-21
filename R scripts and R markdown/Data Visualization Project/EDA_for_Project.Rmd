@@ -1,0 +1,235 @@
+---
+title: "CMDA-3654"
+subtitle: "EDA for Course Project"
+author: "Bekalu Debelu"
+date: "Due as a .pdf upload"
+output:
+  pdf_document:
+    highlight: haddock
+    keep_tex: no
+    number_sections: no
+  html_document:
+    df_print: paged
+geometry: margin = 0.5in
+header-includes:
+- \usepackage{booktabs}
+- \usepackage{longtable}
+- \usepackage{array}
+- \usepackage{multirow}
+- \usepackage{wrapfig}
+- \usepackage{float}
+- \usepackage{colortbl}
+- \usepackage{pdflscape}
+- \usepackage{tabu}
+- \usepackage{threeparttable}
+- \usepackage{threeparttablex}
+- \usepackage[normalem]{ulem}
+- \usepackage{makecell}
+- \usepackage{xcolor}
+editor_options:
+  chunk_output_type: console
+documentclass: article
+urlcolor: blue
+---
+
+<!-- The above is set to automatically compile to a .pdf file.   -->
+<!-- It will only succeed if LaTeX is installed. -->
+
+<!-- If you absolutely can't get LaTeX installed and/or working, then you can compile to a .html first,  -->
+<!-- by clicking on the arrow button next to knit and selecting Knit to HTML. -->
+
+<!-- You must then print you .html file to a .pdf by using first opening it in a web browser and then printing to a .pdf -->
+
+
+```{r setup, include=FALSE}
+# This is the setup chunk
+#  Here you can set global options for the entire document
+
+library(knitr) # I recommend doing this
+
+# Although you can call functions from a library using the following notation
+#  without loading the entire library.
+knitr::opts_chunk$set(echo = TRUE, 
+                      comment = NA, # Recommended
+                      fig.path = "./figures/",  # Store all figures here in relative path (make the folder first)
+                      fig.align = "center",
+                      fig.width = 7,
+                      fig.height = 7,
+                      message = FALSE, # Turn off load messages
+                      warning = FALSE # Turn off warnings
+                      )
+
+```
+
+\clearpage
+
+```{r include=FALSE}
+# You should not echo this chunk.
+# include=FALSE does more than echo=FALSE, it actually does: echo=FALSE, results='hide', message=FALSE, warning=FALSE, fig.show='hide'
+
+# You should set your working directory at the very beginning of your R Markdown file
+# setwd("~/Dropbox/teaching/SU19/CMDA_3654/homework/homework1/")
+
+# In linux ~/ is shorthand for /home/username/
+# You should type things out properly for your system
+# Mac: /Users/username/Documents/CMDA3654/Lectures/Lecture_03/.../
+# Windows: C:/Users/username/Documents/etc/Lecture/Lecture_03/.../
+
+setwd("G:/My Drive/Summer 22/Project")
+library(tidyverse)
+police_reports = read.csv("Police_Department_Incident_Reports__2018_to_Present.csv")
+```
+
+# Abstract
+
+The purpose of this project is to examine the incident reports filed in San Francisco and analyze vehicle related crimes in the city. I focused on variables
+related to types of Incidents reported, the data of the reporting, and from which police districts the reports originated.
+
+# Analysis 1: Vehicle Related Incidents Reports Compared to Other Categories 
+
+```{r echo=FALSE, fig.cap="Plot of Frequency of Incident Reports based on Categories"}
+#Count the instances of incident reports based on categories
+reports_by_category = table(police_reports$Incident.Category)
+
+proportional_table = reports_by_category / sum(reports_by_category)
+
+#Pick the ten most frequently occurring incident reports
+top_10_reports = order(proportional_table, decreasing = T)[1:10]
+
+palette(c("red","blue","green","darkgreen","yellow","purple","lightblue","magenta","pink","orange"))
+
+barplot(proportional_table[top_10_reports], col = c(1:10), ylim = c(0,0.40), las = 2, cex.names = 0.7,
+        xaxt="n", ylab = "Proportion",
+        xlab = "Incident Categories",
+        main = "Relative Frequency of Incidents Based on Category")
+
+legend("topright", legend = row.names(proportional_table)[top_10_reports], fill = c(1:10))
+```
+
+From the graph we can see that the most frequent crime reported is Larceny Theft with Motor Vehicle Theft as the seventh most reported incident. 
+By exploring the sub categories of Larceny related incident reports, we can see that larceny involves theft from vehicles which falls under our area of interest.
+
+\clearpage
+
+# Analysis 2: Examining Larceny related reports
+
+```{r echo=FALSE, fig.cap="Barplot of Larceny Subcategories Based on Frequency"}
+larceny = subset(police_reports,
+                 police_reports$Incident.Category == "Larceny Theft")
+
+ggplot(larceny) + geom_bar(aes(x = Incident.Subcategory, fill = Incident.Subcategory)) +
+scale_x_discrete(labels=c("Auto Parts", "From Vehicle", "Bicycle","Building",
+                            "Other","Pickpocket", "Purse Snatch","Shoplifting",
+                            "Theft From Vehicle")) +
+coord_flip() +
+labs(x = "Larceny Subcategory", y = "Count",
+     main = "Frequency of Larceny Subcategories")
+```
+
+From the bar chart we can view that the majority of larceny related reports are 
+vehicle break-ins including a lower portion of these crimes being incidents where parts from the vehicle itself were stolen.
+
+\clearpage
+
+# Analysis 3: Count of vehicle related reports across the months
+
+```{r echo=FALSE, fig.cap="Plot of Months versus Frequency"}
+vehicle = subset(police_reports, police_reports$Incident.Subcategory == "Larceny - From Vehicle" | police_reports$Incident.Subcategory == "Motor Vehicle Theft")
+
+#First we have to extract the months from the Incident.Date variable and append it as its own variable to the vehicle dataset.
+Incident.Month <- as.Date(vehicle$Incident.Date, format = "%m/%d/%Y")
+Incident.Month <- format(Incident.Month, "%m")
+vehicle$Incident.Month = Incident.Month
+
+ggplot(vehicle) +
+  geom_bar(mapping = aes(x = Incident.Month,
+                         fill = factor(Incident.Year))) +
+  labs(x = "Months", y = "Frequency", 
+       main = "Frequency of Incident ") +
+  scale_x_discrete(labels=c("January","Febuary","March","April","May","June",
+                            "July","August","September","October","November",
+                            "December")) +
+  guides(x = guide_axis(angle = 90))
+```
+
+Figure 3 shows us that vehicle reports are filed at nearly the same volume every year. This shows that we need to narrow our search and look by weeks instead. Find the average incidents that reported on each weekday and see if there are spikes when those days fall on holidays and city-wide events.
+
+\clearpage
+
+# Analysis 4: Radar chart of Police Districts Based on Incidents Reported
+```{r echo=FALSE, fig.cap="Plot of Incident Reports Based on Police Districts"}
+ggplot(vehicle) +
+  geom_bar(mapping = aes(x = Police.District, fill = Police.District)) +
+  coord_polar() +
+  labs(main = "Plot of Incident Reports Based on Police Districts",
+       x = "Police District")
+```
+Figure 4 gives us the distribution of reports across the various police districts in San Francisco. Our initial investigation shows that the districts in Central and Northern have larger number of reports compared to other districts. Our next steps could be to look into these districts and see if they are residential neighborhoods, industrial spaces, etc.
+
+\clearpage
+
+# Appendix
+
+## 4.1 Code for Analysis 1
+```{r eval=FALSE}
+#Count the instances of incident reports based on categories
+reports_by_category = table(police_reports$Incident.Category)
+
+proportional_table = reports_by_category / sum(reports_by_category)
+
+#Pick the ten most frequently occurring incident reports
+top_10_reports = order(proportional_table, decreasing = T)[1:10]
+
+palette(c("red","blue","green","darkgreen","yellow","purple","lightblue","magenta","pink","orange"))
+
+barplot(proportional_table[top_10_reports], col = c(1:10), ylim = c(0,0.40), las = 2, cex.names = 0.7,
+        xaxt="n", ylab = "Proportion",
+        xlab = "Incident Categories",
+        main = "Relative Frequency of Incidents Based on Category")
+
+legend("topright", legend = row.names(proportional_table)[top_10_reports], fill = c(1:10))
+```
+
+## 4.2 Code for Analysis 2
+```{r eval=FALSE}
+#Separate larceny related reports to investigate further
+larceny = subset(police_reports,
+                 police_reports$Incident.Category == "Larceny Theft")
+
+ggplot(larceny) + geom_bar(aes(x = Incident.Subcategory, fill = Incident.Subcategory)) +
+scale_x_discrete(labels=c("Auto Parts", "From Vehicle", "Bicycle","Building",
+                            "Other","Pickpocket", "Purse Snatch","Shoplifting",
+                            "Theft From Vehicle")) +
+coord_flip() +
+labs(x = "Larceny Subcategory", y = "Count",
+     main = "Frequency of Larceny Subcategories")
+```
+
+## 4.3 Code for Analysis 3
+```{r eval=FALSE}
+vehicle = subset(police_reports, police_reports$Incident.Subcategory == "Larceny - From Vehicle" | police_reports$Incident.Subcategory == "Motor Vehicle Theft")
+
+#First we have to extract the months from the Incident.Date variable and append it as its own variable to the vehicle dataset.
+Incident.Month <- as.Date(vehicle$Incident.Date, format = "%m/%d/%Y")
+Incident.Month <- format(Incident.Month, "%m")
+vehicle$Incident.Month = Incident.Month
+
+ggplot(vehicle) +
+  geom_bar(mapping = aes(x = Incident.Month,
+                         fill = factor(Incident.Year))) +
+  labs(x = "Months", y = "Frequency", 
+       main = "Frequency of Incident ") +
+  scale_x_discrete(labels=c("January","Febuary","March","April","May","June",
+                            "July","August","September","October","November",
+                            "December")) +
+  guides(x = guide_axis(angle = 90))
+```
+
+## 4.4 Code for Analysis 4
+```{r eval=FALSE}
+ggplot(vehicle) +
+  geom_bar(mapping = aes(x = Police.District, fill = Police.District)) +
+  coord_polar() +
+  labs(main = "Plot of Incident Reports Based on Police Districts",
+       x = "Police District")
+```
